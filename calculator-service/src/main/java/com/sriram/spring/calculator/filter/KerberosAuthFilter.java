@@ -37,8 +37,9 @@ import java.util.stream.Collectors;
 @WebFilter(
         urlPatterns = "/*"
 )
-public class SASLAuthFilter implements Filter {
+public class KerberosAuthFilter implements Filter {
 
+    private static final String FILTER_NAME = KerberosAuthFilter.class.getSimpleName();
     private static final String AUTHORIZATION_SCHEME = "Negotiate";
 
     private LoginContext loginContext;
@@ -48,8 +49,8 @@ public class SASLAuthFilter implements Filter {
     @Value("${filter.login.conf}")
     private String loginConf;
 
-    @Value("${filter.enable.sasl.auth}")
-    private boolean enableSASLFilter;
+    @Value("${filter.enable.kerberos.auth}")
+    private boolean enableKerberosFilter;
 
     @Value("${login.config.file}")
     private String loginConfFile;
@@ -72,23 +73,23 @@ public class SASLAuthFilter implements Filter {
         } catch (LoginException e) {
             throw  new ServletException(e);
         }
-        log.debug("SASLAuthFilter initialized.");
+        log.debug("{} initialized.", FILTER_NAME);
     }
 
     @Override
     public void destroy() {
-        log.debug("SASLAuthFilter destroyed.");
+        log.debug("{} destroyed.", FILTER_NAME);
     }
 
     @Override
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
-        log.debug("Inside SASLAuthFilter.");
-        if (enableSASLFilter) {
-            log.debug("SASLAuth enabled. Authenticating request");
+        log.debug("Inside {}.", FILTER_NAME);
+        if (enableKerberosFilter) {
+            log.debug("Kerberos auth enabled. Authenticating request");
             //authenticateRequest((HttpServletRequest)request, (HttpServletResponse)response, chain);
             authRequest((HttpServletRequest)request, (HttpServletResponse)response, chain);
         } else {
-            log.debug("SASLAuth disabled. Passing through.");
+            log.debug("Kerberos auth disabled. Passing request along filter chain.");
             chain.doFilter(request, response);
         }
     }
