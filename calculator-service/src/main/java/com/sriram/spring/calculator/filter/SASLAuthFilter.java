@@ -102,6 +102,7 @@ public class SASLAuthFilter implements Filter {
                             }
                             String principal = gssContext.getSrcName().toString();
                             user1 = principal;
+                            AuthContext.AUTH_USER.set(user1);
                             log.debug("Client principal : {}", principal);
                         }
                         gssContext.dispose();

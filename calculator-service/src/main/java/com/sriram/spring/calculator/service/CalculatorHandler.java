@@ -2,6 +2,7 @@ package com.sriram.spring.calculator.service;
 
 import com.sriram.spring.calculator.AuthContext;
 import com.sriram.spring.calculator.api.TCalculatorService;
+import com.sriram.spring.calculator.dto.TAuthException;
 import com.sriram.spring.calculator.dto.TOperation;
 import com.sriram.spring.calculator.dto.TDivisionByZeroException;
 import org.apache.thrift.TException;
@@ -19,13 +20,13 @@ public class CalculatorHandler implements TCalculatorService.Iface {
     CalculatorService calculatorService;
 
     @Override
-    public int calculate(int i1, int i2, TOperation operation) throws TDivisionByZeroException, TException {
+    public int calculate(int i1, int i2, TOperation operation) throws TDivisionByZeroException, TAuthException {
         switch (operation) {
             case ADD:
-                if (AuthContext.USER_NAME.get() == "sriram") {
-                    return calculatorService.add(i1, i2);
+                if (AuthContext.AUTH_USER.get() != "sriram") {
+                    throwAuthException(operation);
                 }
-                throw new RuntimeException();
+                return calculatorService.add(i1, i2);
             case SUBTRACT:
                 return calculatorService.subtract(i1, i2);
             case MULTIPLY:
@@ -34,5 +35,17 @@ public class CalculatorHandler implements TCalculatorService.Iface {
                 return calculatorService.divice(i1, i2);
         }
         return 0;
+    }
+
+
+    private void throwAuthException(TOperation operation) throws TAuthException {
+        StringBuilder sb = new StringBuilder("User : ");
+        sb.append(AuthContext.AUTH_USER.get());
+        sb.append(" is not authorized to execute operation : ");
+        sb.append(operation);
+        TAuthException authException = new TAuthException();
+        authException.setErrorCode((short) 2);
+        authException.setMessage(sb.toString());
+        throw authException;
     }
 }

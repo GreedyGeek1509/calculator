@@ -11,3 +11,8 @@ enum TOperation {
 exception TDivisionByZeroException {
 
 }
+
+exception TAuthException {
+    1: optional i16 errorCode
+    2: optional string message
+}
