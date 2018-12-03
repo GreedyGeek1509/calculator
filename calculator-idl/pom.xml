@@ -26,7 +26,7 @@
                 <artifactId>maven-thrift-plugin</artifactId>
                 <version>0.1.11</version>
                 <configuration>
-                    <thriftExecutable>/usr/local/bin/thrift-0.8</thriftExecutable>
+                    <thriftExecutable>/usr/local/bin/thrift</thriftExecutable>
                     <generator>java:hashcode,java5,beans</generator>
                 </configuration>
                 <executions>

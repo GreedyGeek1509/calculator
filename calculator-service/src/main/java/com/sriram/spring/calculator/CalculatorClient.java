@@ -30,7 +30,7 @@ public class CalculatorClient {
 
         THttpClient transport = new THttpClient("http://localhost:9090/calculator");
         //transport.setCustomHeader("Authorization", "Basic dXNlcjpwYXNz");
-        transport.setCustomHeader("Authorization", "Negotiate " + getTGS("HTTP/calculator-service"));
+        transport.setCustomHeader("Authorization", "Negotiate " + getTGS("SVC/calculator-service"));
         transport.setConnectTimeout(300000);
         TProtocol protocol = new TBinaryProtocol(transport);
         TCalculatorService.Client calculatorClient = new TCalculatorService.Client(protocol);
@@ -40,7 +40,7 @@ public class CalculatorClient {
 
 
     private static String getTGS(String servicePrincipal) throws LoginException, PrivilegedActionException {
-        System.setProperty( "java.security.auth.login.config", "/home/guduri.sriram/workspace/calculator/calculator-service/src/main/resources/jaas.conf");
+        System.setProperty( "java.security.auth.login.config", "/home/sriram/workspace/calculator/calculator-service/src/main/resources/jaas.conf");
         LoginContext loginCtx = new LoginContext("ClientConf");
         loginCtx.login();
         String token = Subject.doAs(loginCtx.getSubject(), (PrivilegedAction<String>) () -> {
