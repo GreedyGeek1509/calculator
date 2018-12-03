@@ -49,11 +49,19 @@ public class SASLAuthFilter implements Filter {
     private String loginConf;
 
     @Value("${filter.enable.sasl.auth}")
-    boolean enableSASLFilter;
+    private boolean enableSASLFilter;
+
+    @Value("${login.config.file}")
+    private String loginConfFile;
 
     @Override
     public void init(FilterConfig filterConfig) throws ServletException {
-        log.debug("Using login conf : {}", loginConf);
+        log.debug("Using login conf file {}, with config : {}", loginConfFile, loginConf);
+        System.setProperty("java.security.auth.login.config", loginConfFile);
+//        System.setProperty( "sun.security.krb5.debug", "true");
+//        System.setProperty( "java.security.krb5.realm", "DEV.SRIRAM.COM");
+//        System.setProperty( "java.security.krb5.kdc", "localhost");
+//        System.setProperty( "javax.security.auth.useSubjectCredsOnly", "true");
         try {
             loginContext = new LoginContext(loginConf);
             loginContext.login();
@@ -74,16 +82,20 @@ public class SASLAuthFilter implements Filter {
 
     @Override
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
-        log.debug("Passing through SASLAuthFilter.");
+        log.debug("Inside SASLAuthFilter.");
         if (enableSASLFilter) {
-            authenticateRequest((HttpServletRequest)request, (HttpServletResponse)response, chain);
+            log.debug("SASLAuth enabled. Authenticating request");
+            //authenticateRequest((HttpServletRequest)request, (HttpServletResponse)response, chain);
+            authRequest((HttpServletRequest)request, (HttpServletResponse)response, chain);
         } else {
+            log.debug("SASLAuth disabled. Passing through.");
             chain.doFilter(request, response);
         }
     }
 
     private void authenticateRequest(HttpServletRequest request, HttpServletResponse response, FilterChain chain) throws IOException {
         byte[] authToken = getAuthToken(request);
+        log.debug("Query String : {}", request.getQueryString());
         if (authToken == null) {
             requestAuthentication(response,null);
         } else {
@@ -93,8 +105,8 @@ public class SASLAuthFilter implements Filter {
                     String user1 = null;
                     try {
                         gssContext = gssManager.createContext((GSSCredential) null);
-                        gssContext.requestMutualAuth(true);
-                        gssContext.requestInteg(true);
+                        //gssContext.requestMutualAuth(true);
+                        //gssContext.requestInteg(true);
                         byte[] serverToken = gssContext.acceptSecContext(authToken, 0, authToken.length);
                         if (!gssContext.isEstablished()) {
                             // Spnego need more challenges
@@ -112,8 +124,10 @@ public class SASLAuthFilter implements Filter {
                             AuthContext.AUTH_USER.set(user1);
                             log.debug("Client principal : {}", principal);
                         }
+                        chain.doFilter(request, response);
                         gssContext.dispose();
                     } catch (GSSException gsse) {
+                        log.error("Caught exception", gsse);
                         response.sendError(HttpStatus.SC_FORBIDDEN, "Forbidden");
                     } finally {
                         if (gssContext != null) {
@@ -122,11 +136,36 @@ public class SASLAuthFilter implements Filter {
                     }
                     return user1;
                 });
-                chain.doFilter(request, response);
             } catch (PrivilegedActionException e) {
                 throw new RuntimeException(e.getException());
-            } catch (ServletException e) {
-                throw new RuntimeException(e);
+            }
+        }
+    }
+
+    private void authRequest(HttpServletRequest request, HttpServletResponse response, FilterChain chain) throws IOException {
+        byte[] authToken = getAuthToken(request);
+        if (authToken == null) {
+            requestAuthentication(response,null);
+        } else {
+            try {
+                String user = Subject.doAs(loginContext.getSubject(), (PrivilegedExceptionAction<String>) () -> {
+                    try {
+                        GSSContext context = gssManager.createContext( (GSSCredential) null);
+                        context.acceptSecContext(authToken, 0, authToken.length);
+                        String clientPrincipal = context.getSrcName().toString();
+                        log.debug("client principal : {}", clientPrincipal);
+                        AuthContext.AUTH_USER.set(clientPrincipal);
+                        chain.doFilter(request, response);
+                        context.dispose();
+                        return clientPrincipal;
+                    }
+                    catch ( Exception e) {
+                        e.printStackTrace();
+                        return null;
+                    }
+                });
+            } catch (PrivilegedActionException e) {
+                throw new RuntimeException(e.getException());
             }
         }
     }
@@ -138,7 +177,7 @@ public class SASLAuthFilter implements Filter {
             return null;
         }
         // get auth to= authorization.substring(AUTHORIZATION_SCHEME.length()).trim();
-        return base64.decode(authorization);
+        return base64.decode(authorization.substring(AUTHORIZATION_SCHEME.length()).trim());
     }
 
     private void requestAuthentication(HttpServletResponse response, byte[] authToken) throws IOException {

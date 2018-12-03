@@ -5,6 +5,7 @@ import com.sriram.spring.calculator.api.TCalculatorService;
 import com.sriram.spring.calculator.dto.TAuthException;
 import com.sriram.spring.calculator.dto.TOperation;
 import com.sriram.spring.calculator.dto.TDivisionByZeroException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -12,6 +13,7 @@ import org.springframework.stereotype.Component;
  * @author guduri.sriram
  */
 
+@Slf4j
 @Component
 public class CalculatorHandler implements TCalculatorService.Iface {
 
@@ -20,6 +22,7 @@ public class CalculatorHandler implements TCalculatorService.Iface {
 
     @Override
     public int calculate(int i1, int i2, TOperation operation) throws TDivisionByZeroException, TAuthException {
+        log.debug("Authenticated User : {}", AuthContext.AUTH_USER.get());
         switch (operation) {
             case ADD:
                 if (AuthContext.AUTH_USER.get() != "sriram") {
