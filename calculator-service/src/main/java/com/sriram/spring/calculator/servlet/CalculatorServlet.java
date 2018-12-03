@@ -16,7 +16,7 @@ import java.io.IOException;
  */
 @Slf4j
 @WebServlet(name = "calculator", urlPatterns = "/calculator")
-public class DelegateServlet extends TServlet {
+public class CalculatorServlet extends TServlet {
 
     @Override
     public void init() throws ServletException {
@@ -30,7 +30,7 @@ public class DelegateServlet extends TServlet {
         super.destroy();
     }
 
-    public DelegateServlet(TProcessor processor, TProtocolFactory protocolFactory) {
+    public CalculatorServlet(TProcessor processor, TProtocolFactory protocolFactory) {
         super(processor, protocolFactory);
     }
 

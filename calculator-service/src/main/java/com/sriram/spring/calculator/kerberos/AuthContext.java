@@ -1,4 +1,4 @@
-package com.sriram.spring.calculator;
+package com.sriram.spring.calculator.kerberos;
 
 /**
  * @author guduri.sriram

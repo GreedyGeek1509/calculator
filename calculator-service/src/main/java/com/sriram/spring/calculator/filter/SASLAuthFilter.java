@@ -1,6 +1,6 @@
 package com.sriram.spring.calculator.filter;
 
-import com.sriram.spring.calculator.AuthContext;
+import com.sriram.spring.calculator.kerberos.AuthContext;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.http.HttpHeaders;
@@ -46,7 +46,10 @@ public class SASLAuthFilter implements Filter {
     private Base64 base64;
 
     @Value("${filter.login.conf}")
-    String loginConf;
+    private String loginConf;
+
+    @Value("${filter.enable.sasl.auth}")
+    boolean enableSASLFilter;
 
     @Override
     public void init(FilterConfig filterConfig) throws ServletException {
@@ -72,7 +75,11 @@ public class SASLAuthFilter implements Filter {
     @Override
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
         log.debug("Passing through SASLAuthFilter.");
-        authenticateRequest((HttpServletRequest)request, (HttpServletResponse)response, chain);
+        if (enableSASLFilter) {
+            authenticateRequest((HttpServletRequest)request, (HttpServletResponse)response, chain);
+        } else {
+            chain.doFilter(request, response);
+        }
     }
 
     private void authenticateRequest(HttpServletRequest request, HttpServletResponse response, FilterChain chain) throws IOException {

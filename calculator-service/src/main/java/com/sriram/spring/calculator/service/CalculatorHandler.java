@@ -1,11 +1,10 @@
 package com.sriram.spring.calculator.service;
 
-import com.sriram.spring.calculator.AuthContext;
+import com.sriram.spring.calculator.kerberos.AuthContext;
 import com.sriram.spring.calculator.api.TCalculatorService;
 import com.sriram.spring.calculator.dto.TAuthException;
 import com.sriram.spring.calculator.dto.TOperation;
 import com.sriram.spring.calculator.dto.TDivisionByZeroException;
-import org.apache.thrift.TException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
