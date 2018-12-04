@@ -21,39 +21,58 @@ import javax.security.auth.login.LoginException;
 import java.io.UnsupportedEncodingException;
 import java.security.PrivilegedAction;
 import java.security.PrivilegedActionException;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * @author guduri.sriram
  */
 public class CalculatorClient {
+
+    private static final String SERVICE = "SVC/calculator-service";
+
+    private static final Map<String, String> TOKEN_STORE = new HashMap<>();
+
     public static void main(String[] args) throws TException, TDivisionByZeroException, TAuthException, LoginException, UnsupportedEncodingException, GSSException, PrivilegedActionException {
 
-        THttpClient transport = new THttpClient("http://localhost:9090/calculator");
+        System.setProperty( "java.security.auth.login.config", "/home/sriram/workspace/calculator/calculator-service/src/main/resources/jaas.conf");
+
+        THttpClient transport = new ThriftClient("http://localhost:9090/calculator", SERVICE, TOKEN_STORE);
         //transport.setCustomHeader("Authorization", "Basic dXNlcjpwYXNz");
-        transport.setCustomHeader("Authorization", "Negotiate " + getTGS("SVC/calculator-service"));
+        //transport.setCustomHeader("Authorization", "Negotiate " + loginAndGetServiceToken("HTTP/calculator-service"));
         transport.setConnectTimeout(300000);
         TProtocol protocol = new TBinaryProtocol(transport);
         TCalculatorService.Client calculatorClient = new TCalculatorService.Client(protocol);
 
+        refreshToken(SERVICE);
         System.out.println(calculatorClient.calculate(1, 2, TOperation.MULTIPLY));
+        refreshToken(SERVICE);
+        System.out.println(calculatorClient.calculate(32, 15, TOperation.MULTIPLY));
     }
 
 
-    private static String getTGS(String servicePrincipal) throws LoginException, PrivilegedActionException {
-        System.setProperty( "java.security.auth.login.config", "/home/sriram/workspace/calculator/calculator-service/src/main/resources/jaas.conf");
+    private static void refreshToken(String service) throws LoginException, PrivilegedActionException {
+        String newToken = loginAndGetServiceToken(service);
+        if (null != newToken) {
+            TOKEN_STORE.put(service, newToken);
+        }
+    }
+
+    private static String loginAndGetServiceToken(String servicePrincipal) throws LoginException, PrivilegedActionException {
         LoginContext loginCtx = new LoginContext("ClientConf");
         loginCtx.login();
         String token = Subject.doAs(loginCtx.getSubject(), (PrivilegedAction<String>) () -> {
             try {
-                byte[] byteToken = new byte[0];
                 GSSManager manager = GSSManager.getInstance();
                 Oid krb5Oid = new Oid("1.2.840.113554.1.2.2");
                 GSSName serverName = manager.createName(servicePrincipal, GSSName.NT_USER_NAME);
-                final GSSContext context = manager.createContext(serverName, krb5Oid, null, GSSContext.DEFAULT_LIFETIME);
+                GSSContext context = manager.createContext(serverName, krb5Oid, null, GSSContext.DEFAULT_LIFETIME);
                 context.requestMutualAuth( true);
-                context.requestCredDeleg( false);
+                context.requestInteg(true);
                 context.requestConf(true);
-                byte[] secToken = context.initSecContext(byteToken, 0, byteToken.length);
+                byte[] secToken = new byte[0];
+                secToken = context.initSecContext(secToken, 0, secToken.length);
+                context.dispose();
                 byte[] encodedToken = Base64.encodeBase64(secToken);
                 return new String(encodedToken, "UTF-8");
             } catch (GSSException e) {
